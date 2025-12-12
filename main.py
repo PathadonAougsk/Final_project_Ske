@@ -1,109 +1,124 @@
+import json
+import threading
 import tkinter as tk
 from tkinter import ttk
 
-from ColorScheme import ColorScheme
+import websocket
 
 
-class BTCTicker(ColorScheme):
-    def __init__(self, root):
-        super().__init__()
-        self.root = root
-        self.root.title("BTC Price Ticker")
-        self.root.geometry("400x200")
-
-        self.is_closing = False
+class CryptoTicker:
+    def __init__(self, parent, symbol, display_name):
+        self.parent = parent
+        self.symbol = symbol.lower()
+        self.display_name = display_name
+        self.is_active = False
         self.ws = None
 
-        self.setup_ui()
+        self.frame = ttk.Frame(parent, relief="solid", borderwidth=1, padding=20)
 
-    def setup_ui(self):
-        self.OrderBookSnapShot()
-        self.OrderBookHistory()
+        ttk.Label(self.frame, text=display_name, font=("Arial", 16, "bold")).pack()
 
-    def OrderBookSnapShot(self):
-        self.style.configure("SnapShot.TLabelframe", borderwidth=1, relief="solid")
+        self.price_label = tk.Label(
+            self.frame, text="--,---", font=("Arial", 40, "bold")
+        )
+        self.price_label.pack(pady=10)
 
-        self.style.configure(
-            "SnapShot.TLabelframe.Label",
-            font=("Arial", 16),
+        self.change_label = ttk.Label(self.frame, text="--", font=("Arial", 12))
+        self.change_label.pack()
+
+    def start(self):
+        """Start WebSocket connection."""
+        if self.is_active:
+            return
+
+        self.is_active = True
+        ws_url = f"wss://stream.binance.com:9443/ws/{self.symbol}@ticker"
+
+        self.ws = websocket.WebSocketApp(
+            ws_url,
+            on_message=self.on_message,
+            on_error=lambda ws, err: print(f"{self.symbol} error: {err}"),
+            on_close=lambda ws, s, m: print(f"{self.symbol} closed"),
+            on_open=lambda ws: print(f"{self.symbol} connected"),
         )
 
-        self.style.configure("SnapShot.TLabel", font=("Arial", 14))
+        threading.Thread(target=self.ws.run_forever, daemon=True).start()
 
-        Frame = ttk.LabelFrame(
-            self.root,
-            text="Order Book SnapShot",
-            style="SnapShot.TLabelframe",
-            width=575,
-            height=32,
+    def stop(self):
+        """Stop WebSocket connection."""
+        self.is_active = False
+        if self.ws:
+            self.ws.close()
+            self.ws = None
+
+    def on_message(self, ws, message):
+        """Handle price updates."""
+        if not self.is_active:
+            return
+
+        data = json.loads(message)
+        price = float(data["c"])
+        change = float(data["p"])
+        percent = float(data["P"])
+
+        self.parent.after(0, self.update_display, price, change, percent)
+
+    def update_display(self, price, change, percent):
+        """Update the ticker display."""
+        if not self.is_active:
+            return
+
+        color = "green" if change >= 0 else "red"
+        self.price_label.config(text=f"{price:,.2f}", fg=color)
+
+        sign = "+" if change >= 0 else ""
+        self.change_label.config(
+            text=f"{sign}{change:,.2f} ({sign}{percent:.2f}%)", foreground=color
         )
 
-        Label1 = ttk.Label(Frame, text="BIDS Highest to Lowest")
-        Label2 = ttk.Label(Frame, text="ASK Lowest to Highest")
+    def grid(self, **kwargs):
+        self.frame.grid(**kwargs)
 
-        Frame.grid(row=0, column=0, sticky="")
-        Label1.grid(row=0, column=0, sticky="", padx=(5, 20))
-        Label2.grid(row=0, column=1, sticky="", padx=(20, 5))
 
-        Frame.columnconfigure(0, weight=1)
-        Frame.columnconfigure(1, weight=1)
+class MultiTickerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Crypto Dashboard")
+        self.root.geometry("800x300")
 
-    def OrderBookHistory(self):
-        self.style.configure("OrderBookHistory.TFrame", borderwidth=1, relief="solid")
-        # self.style.configure("Black.TFrame", background="black")
+        # Create ticker panel
+        ticker_frame = ttk.Frame(root, padding=20)
+        ticker_frame.pack(fill=tk.BOTH, expand=True)
 
-        OrderFrame = ttk.Frame(
-            self.root, width=575, height=655, style="OrderBookHistory.TFrame"
-        )
+        ticker_frame.grid_columnconfigure(0, weight=1)
+        ticker_frame.grid_columnconfigure(1, weight=1)
+        ticker_frame.grid_columnconfigure(2, weight=1)
 
-        for i in range(15):
-            tmpFrame = ttk.Frame(OrderFrame, width=560, height=33, style="Black.TFrame")
+        # Create BTC ticker
+        self.btc_ticker = CryptoTicker(ticker_frame, "btcusdt", "BTC/USDT")
+        self.btc_ticker.grid(row=0, column=0)
 
-            bid_price = ttk.Label(
-                tmpFrame, text="$120", background="red", padding=(0, 10)
-            )
-            bid_qty = ttk.Label(
-                tmpFrame, text="0.00123", background="red", padding=(0, 10)
-            )
-            ask_price = ttk.Label(
-                tmpFrame, text="$121", background="red", padding=(0, 10)
-            )
-            ask_qty = ttk.Label(
-                tmpFrame, text="0.00456", background="red", padding=(0, 10)
-            )
+        # Create ETH ticker
+        self.eth_ticker = CryptoTicker(ticker_frame, "ethusdt", "ETH/USDT")
+        self.eth_ticker.grid(row=0, column=1)
 
-            for x in range(4):
-                tmpFrame.columnconfigure(x, weight=1)
+        self.sol_ticket = CryptoTicker(ticker_frame, "solusdt", "SOL/USDT")
+        self.sol_ticket.grid(row=0, column=2)
 
-            bid_price.grid(row=0, column=0)
-            bid_qty.grid(row=0, column=1)
-            ask_price.grid(row=0, column=2)
-            ask_qty.grid(row=0, column=3)
-
-            OrderFrame.rowconfigure(i, weight=1)
-            tmpFrame.grid(row=i, column=0)
-            tmpFrame.grid_propagate(False)
-
-        OrderFrame.grid_propagate(False)
-        OrderFrame.grid(row=1, column=0)
+        # Start both tickers
+        self.btc_ticker.start()
+        self.eth_ticker.start()
+        self.sol_ticket.start()
 
     def on_closing(self):
         """Clean up when closing."""
-        self.is_closing = True
-        if self.ws:
-            self.ws.close()
+        self.btc_ticker.stop()
+        self.eth_ticker.stop()
         self.root.destroy()
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.columnconfigure(0, weight=1)
-    root.columnconfigure(1, weight=1)
-
-    root.rowconfigure(0, weight=1)
-    root.rowconfigure(1, weight=3)
-    root.rowconfigure(2, weight=2)
-
-    app = BTCTicker(root)
+    app = MultiTickerApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
