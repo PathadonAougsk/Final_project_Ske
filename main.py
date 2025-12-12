@@ -1,30 +1,19 @@
 import json
 import threading
 import tkinter as tk
+from datetime import datetime, timedelta, timezone
 from tkinter import ttk
 
 import websocket
 
 
-class CryptoTicker:
-    def __init__(self, parent, symbol, display_name):
-        self.parent = parent
-        self.symbol = symbol.lower()
-        self.display_name = display_name
+class Tracker:
+    def __init__(self, symbol, typeOf, callback=None) -> None:
+        self.symbol = symbol
+        self.typeOf = typeOf
+        self.callback = callback
         self.is_active = False
         self.ws = None
-
-        self.frame = ttk.Frame(parent, relief="solid", borderwidth=1, padding=20)
-
-        ttk.Label(self.frame, text=display_name, font=("Arial", 16, "bold")).pack()
-
-        self.price_label = tk.Label(
-            self.frame, text="--,---", font=("Arial", 40, "bold")
-        )
-        self.price_label.pack(pady=10)
-
-        self.change_label = ttk.Label(self.frame, text="--", font=("Arial", 12))
-        self.change_label.pack()
 
     def start(self):
         """Start WebSocket connection."""
@@ -32,7 +21,7 @@ class CryptoTicker:
             return
 
         self.is_active = True
-        ws_url = f"wss://stream.binance.com:9443/ws/{self.symbol}@ticker"
+        ws_url = f"wss://stream.binance.com:9443/ws/{self.symbol}@{self.typeOf}"
 
         self.ws = websocket.WebSocketApp(
             ws_url,
@@ -57,16 +46,71 @@ class CryptoTicker:
             return
 
         data = json.loads(message)
-        price = float(data["c"])
-        change = float(data["p"])
-        percent = float(data["P"])
+        if self.typeOf == "ticker":
+            price = float(data["c"])
+            change = float(data["p"])
+            percent = float(data["P"])
 
-        self.parent.after(0, self.update_display, price, change, percent)
+            self.information = {"price": price, "change": change, "percent": percent}
 
-    def update_display(self, price, change, percent):
-        """Update the ticker display."""
-        if not self.is_active:
-            return
+        if self.typeOf == "trade":
+            time = datetime.fromtimestamp(
+                float(data["T"]) / 1000, tz=timezone(timedelta(hours=7))
+            ).strftime("%H:%M")
+            price = data["p"]
+            quantity = data["q"]
+
+            self.information = {"time": time, "price": price, "quantity": quantity}
+
+        if self.typeOf == "kline_1h":
+            ending_time = datetime.fromtimestamp(
+                float(data["k"]["T"]) / 1000, tz=timezone(timedelta(hours=7))
+            ).strftime("%H:%M:%S")
+            data = data["k"]
+            open_price = float(data["o"])
+            close_price = float(data["c"])
+            high_price = float(data["h"])
+            low_price = float(data["l"])
+
+            self.information = {
+                "ending_time": ending_time,
+                "open_price": open_price,
+                "close_price": close_price,
+                "high_price": high_price,
+                "low_price": low_price,
+            }
+
+        if self.callback:
+            self.callback(self.information)
+
+
+class CryptoTicker:
+    def __init__(self, parent, symbol, display_name):
+        self.ticker_tracker = Tracker(
+            symbol.lower(), "ticker", callback=self.update_display
+        )
+        self.trader_tracker = Tracker(
+            symbol.lower(), "trade", callback=self.update_trading
+        )
+
+        self.frame = ttk.Frame(parent, relief="solid", borderwidth=1, padding=20)
+
+        ttk.Label(self.frame, text=display_name, font=("Arial", 16, "bold")).pack()
+
+        self.price_label = tk.Label(
+            self.frame, text="--,---", font=("Arial", 40, "bold")
+        )
+        self.price_label.pack(pady=10)
+
+        self.trading_label = tk.Label(self.frame, text="------", font=("Arial", 16))
+        self.trading_label.pack()
+        self.change_label = ttk.Label(self.frame, text="--", font=("Arial", 12))
+        self.change_label.pack()
+
+    def update_display(self, information):
+        change = information["change"]
+        price = information["price"]
+        percent = information["percent"]
 
         color = "green" if change >= 0 else "red"
         self.price_label.config(text=f"{price:,.2f}", fg=color)
@@ -76,8 +120,26 @@ class CryptoTicker:
             text=f"{sign}{change:,.2f} ({sign}{percent:.2f}%)", foreground=color
         )
 
+    def update_trading(self, information):
+        time = information["time"]
+        price = information["price"]
+        quantity = information["quantity"]
+
+        self.trading_label.config(
+            text=f"{time} | Price: {float(price):.2f} | Qty: {float(quantity):.5f}"
+        )
+
+    def start(self):
+        self.ticker_tracker.start()
+        self.trader_tracker.start()
+
+    def stop(self):
+        self.ticker_tracker.stop()
+        self.trader_tracker.stop()
+
     def grid(self, **kwargs):
         self.frame.grid(**kwargs)
+        self.frame.grid_propagate(False)
 
 
 class MultiTickerApp:
@@ -105,7 +167,6 @@ class MultiTickerApp:
         self.sol_ticket = CryptoTicker(ticker_frame, "solusdt", "SOL/USDT")
         self.sol_ticket.grid(row=0, column=2)
 
-        # Start both tickers
         self.btc_ticker.start()
         self.eth_ticker.start()
         self.sol_ticket.start()
@@ -114,6 +175,7 @@ class MultiTickerApp:
         """Clean up when closing."""
         self.btc_ticker.stop()
         self.eth_ticker.stop()
+        self.sol_ticket.stop()
         self.root.destroy()
 
 
