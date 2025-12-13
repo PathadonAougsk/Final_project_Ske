@@ -30,8 +30,6 @@ Install required dependencies:
 pip install websocket-client requests matplotlib tk
 ```
 
----
-
 ### 2. Run the Application
 
 Navigate to the project directory:
