@@ -79,6 +79,23 @@ class TraderTracker(Framework):
             self.callback(self.information)
 
 
+class bookDepthTracker:
+    def fetch_data(self, symbol, limit):
+        url = "https://api.binance.com/api/v3/depth"
+        params = {"symbol": "BTCUSDT", "limit": limit}
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        bids_dict, asks_dict = {}, {}
+        for price, quantity in data["bids"]:
+            bids_dict[float(price)] = float(quantity)
+
+        for price, quantity in data["asks"]:
+            asks_dict[float(price)] = float(quantity)
+
+        return bids_dict, asks_dict
+
+
 class CaddleTracker:
     def fetch_data(self, symbol):
         url = "https://api.binance.com/api/v3/klines"

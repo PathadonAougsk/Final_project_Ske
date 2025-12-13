@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from widget import CryptoTicker, KlineGraph
+from widget import BookDepth, CryptoTicker, KlineGraph, TraderWidget
 
 
 class MultiTickerApp:
@@ -12,6 +12,9 @@ class MultiTickerApp:
 
         self.log_frame = ttk.Frame(root, padding=20)
         self.log_frame.pack(side="left")
+
+        self.book_dept = BookDepth(self.log_frame, "btcusdt", "btcusdt", 10)
+        self.book_dept.pack()
 
         right_frame = ttk.Frame(root, padding=20)
         right_frame.pack(side="right")
@@ -25,8 +28,9 @@ class MultiTickerApp:
         information_frame = ttk.Frame(right_frame, padding=20)
         information_frame.pack(side="top")
 
-        self.recent_sale_frame = ttk.Frame(information_frame, padding=20)
-        self.recent_sale_frame.pack(side="right")
+        self.recent_trade_frame = ttk.Frame(information_frame, padding=20)
+        self.recent_trade_frame.pack(side="right")
+        self.SetTrader()
 
         self.ticker_frame = ttk.Frame(information_frame, padding=20)
         self.ticker_frame.pack(side="left")
@@ -55,15 +59,19 @@ class MultiTickerApp:
         self.eth_ticker.start()
         self.sol_ticket.start()
 
-    def SetTrader(self, typeOf):
-        trader_frame = ttk.Frame(self.recent_sale_frame, padding=20)
-        trader_frame.pack()
+    def SetTrader(self):
+        self.recent_trade = TraderWidget(
+            self.recent_trade_frame, "btcusdt", "Recent Trade"
+        )
+        self.recent_trade.pack()
+        self.recent_trade.start()
 
     def on_closing(self):
         """Clean up when closing."""
         self.btc_ticker.stop()
         self.eth_ticker.stop()
         self.sol_ticket.stop()
+        self.recent_trade.stop()
         self.root.destroy()
 
 
