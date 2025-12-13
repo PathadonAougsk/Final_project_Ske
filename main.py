@@ -1,77 +1,99 @@
 import tkinter as tk
 from tkinter import ttk
 
-from widget import BookDepth, CryptoTicker, KlineGraph, TraderWidget
+# Keeping your original imports
+from lib import CaddleTracker, TickerTracker, bookDepthTracker
+from widget import BookDepth, KlineGraph, StatusTracker
 
 
 class MultiTickerApp:
-    def __init__(self, root):
+    def __init__(self, root) -> None:
         self.root = root
         self.root.title("Crypto Dashboard")
-        self.root.geometry("1366x768")
 
-        self.log_frame = ttk.Frame(root, padding=20)
-        self.log_frame.pack(side="left")
+        self.root.grid_rowconfigure(0, weight=10)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
-        self.book_dept = BookDepth(self.log_frame, "btcusdt", "btcusdt", 10)
-        self.book_dept.pack()
+        self.top_body = tk.Frame(root)
+        self.bottom_body = ttk.Frame(root)
 
-        right_frame = ttk.Frame(root, padding=20)
-        right_frame.pack(side="right")
+        self.top_body.grid(row=0, column=0, sticky="nsew")
+        self.bottom_body.grid(row=1, column=0, sticky="nsew")
 
-        graph_frame = ttk.Frame(right_frame, padding=(0, 10))
-        graph_frame.pack(side="bottom")
+        self.top_body.grid_rowconfigure(0, weight=1)
+        self.top_body.grid_columnconfigure(0, weight=1)
+        self.top_body.grid_columnconfigure(1, weight=3)
 
-        self.graph = KlineGraph(graph_frame, "btcusdt", "BTC Graph")
-        self.graph.pack(fill="both")
+        self.Upper_Part_Left()
+        self.Upper_Part_Right()
+        self.Lower_Part_Bottom()
 
-        information_frame = ttk.Frame(right_frame, padding=20)
-        information_frame.pack(side="top")
+    def Upper_Part_Left(self):
+        log_container = ttk.LabelFrame(self.top_body, text="Order Book SnapShot")
+        log_container.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 
-        self.recent_trade_frame = ttk.Frame(information_frame, padding=20)
-        self.recent_trade_frame.pack(side="right")
-        self.SetTrader()
+        log_container.grid_rowconfigure(0, weight=6)
+        log_container.grid_rowconfigure(1, weight=4)
+        log_container.grid_rowconfigure(2, weight=0)
+        log_container.grid_columnconfigure(0, weight=1)
 
-        self.ticker_frame = ttk.Frame(information_frame, padding=20)
-        self.ticker_frame.pack(side="left")
-        self.SetTicker()
+        self.book_depth = BookDepth(log_container, "btcusdt", "", 10)
+        self.book_depth.create_frame()
+        self.book_depth.frame.grid(row=0, column=0, sticky="nsew")
 
-    def SetTicker(self):
-        ticker_frame = ttk.Frame(self.ticker_frame, padding=20)
-        ticker_frame.pack(fill=tk.BOTH, expand=True)
+        self.secondary_log_frame = ttk.LabelFrame(log_container, text="Ticker Tracker")
+        self.secondary_log_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
-        ticker_frame.grid_columnconfigure(0, weight=1)
-        ticker_frame.grid_columnconfigure(1, weight=1)
-        ticker_frame.grid_columnconfigure(2, weight=1)
+        ttk.Label(
+            self.secondary_log_frame, text="Put more widgets here (e.g., Trades, Stats)"
+        ).pack(expand=True, fill="both")
 
-        # Create BTC ticker
-        self.btc_ticker = CryptoTicker(ticker_frame, "btcusdt", "BTC/USDT")
-        self.btc_ticker.grid(row=0, column=0)
+        log_button_frame = ttk.Frame(log_container)
+        log_button_frame.grid(row=2, column=0, sticky="se", padx=5, pady=5)
 
-        # Create ETH ticker
-        self.eth_ticker = CryptoTicker(ticker_frame, "ethusdt", "ETH/USDT")
-        self.eth_ticker.grid(row=0, column=1)
+        ttk.Button(
+            log_button_frame,
+            text="Log Button",
+            command=lambda: print("Log Button Clicked"),
+        ).pack(side="right")
 
-        self.sol_ticket = CryptoTicker(ticker_frame, "solusdt", "SOL/USDT")
-        self.sol_ticket.grid(row=0, column=2)
-
-        self.btc_ticker.start()
-        self.eth_ticker.start()
-        self.sol_ticket.start()
-
-    def SetTrader(self):
-        self.recent_trade = TraderWidget(
-            self.recent_trade_frame, "btcusdt", "Recent Trade"
+    def Upper_Part_Right(self):
+        graph_container = ttk.LabelFrame(
+            self.top_body, text="BTC 1 Hour Candlestick Chart"
         )
-        self.recent_trade.pack()
-        self.recent_trade.start()
+        graph_container.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+
+        graph_container.grid_rowconfigure(0, weight=1)
+        graph_container.grid_columnconfigure(0, weight=1)
+        graph_container.grid_columnconfigure(0, weight=1)
+
+        self.graph = KlineGraph(
+            graph_container, "btcusdt", "BTC 1 Hour Candlestick Chart"
+        )
+        self.graph.UpdateGraph()
+        self.graph.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+        graph_button_frame = ttk.Frame(graph_container)
+        graph_button_frame.grid(row=1, column=0, sticky="se", padx=5, pady=5)
+        ttk.Button(
+            graph_button_frame,
+            text="Manual",
+            command=lambda: self.graph.UpdateGraph(),
+        ).pack(side="right")
+
+    def Lower_Part_Bottom(self):
+        bottom_frame = self.bottom_body
+        self.status_tracker = StatusTracker(bottom_frame)
+        status_frame = ttk.Frame(bottom_frame)
+        status_frame.pack(side="bottom", fill="x", padx=10, pady=(0, 5))
+        ttk.Label(status_frame, text="10:54 11/30/2025").pack(side="left")
+        ttk.Button(
+            status_frame, text="Refresh", command=lambda: self.graph.UpdateGraph()
+        ).pack(side="right")
 
     def on_closing(self):
-        """Clean up when closing."""
-        self.btc_ticker.stop()
-        self.eth_ticker.stop()
-        self.sol_ticket.stop()
-        self.recent_trade.stop()
+        self.status_tracker.stop()
         self.root.destroy()
 
 

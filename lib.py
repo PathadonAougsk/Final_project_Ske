@@ -67,13 +67,10 @@ class TraderTracker(Framework):
             return
 
         data = json.loads(message)
-        time = datetime.fromtimestamp(
-            float(data["T"]) / 1000, tz=timezone(timedelta(hours=7))
-        ).strftime("%H:%M")
         price = data["p"]
         quantity = data["q"]
 
-        self.information = {"time": time, "price": price, "quantity": quantity}
+        self.information = {"symbol": self.symbol, "price": price, "quantity": quantity}
 
         if self.callback:
             self.callback(self.information)
@@ -88,10 +85,10 @@ class bookDepthTracker:
 
         bids_dict, asks_dict = {}, {}
         for price, quantity in data["bids"]:
-            bids_dict[float(price)] = float(quantity)
+            bids_dict[f"${float(price):.3f}"] = f"{float(quantity):.5f}"
 
         for price, quantity in data["asks"]:
-            asks_dict[float(price)] = float(quantity)
+            asks_dict[f"${float(price):.3f}"] = f"{float(quantity):.5f}"
 
         return bids_dict, asks_dict
 
