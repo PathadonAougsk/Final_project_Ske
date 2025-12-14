@@ -1,10 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
+from datetime import datetime
 
-# Keeping your original imports
 from lib import CaddleTracker, TickerTracker, bookDepthTracker
 from widget import BookDepth, KlineGraph, StatusTracker
 
+# Styling is really Hard.... 
 
 class MultiTickerApp:
     def __init__(self, root) -> None:
@@ -39,24 +40,25 @@ class MultiTickerApp:
         log_container.grid_columnconfigure(0, weight=1)
 
         self.book_depth = BookDepth(log_container, "btcusdt", "", 10)
-        self.book_depth.create_frame()
         self.book_depth.frame.grid(row=0, column=0, sticky="nsew")
 
-        self.secondary_log_frame = ttk.LabelFrame(log_container, text="Ticker Tracker")
+        self.secondary_log_frame = ttk.LabelFrame(log_container, text="Reminder")
         self.secondary_log_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
         ttk.Label(
-            self.secondary_log_frame, text="Put more widgets here (e.g., Trades, Stats)"
+            self.secondary_log_frame, text="Order Book Update Every 2 minutes"
         ).pack(expand=True, fill="both")
 
         log_button_frame = ttk.Frame(log_container)
         log_button_frame.grid(row=2, column=0, sticky="se", padx=5, pady=5)
 
-        ttk.Button(
+        button = ttk.Button(
             log_button_frame,
-            text="Log Button",
-            command=lambda: print("Log Button Clicked"),
-        ).pack(side="right")
+            text="Hide SOL/USDT", 
+        )
+
+        button.grid(row=0, column=10, sticky="e", padx=5)
+        button.configure(command=lambda: self.book_depth.toggle_visibility(button))
 
     def Upper_Part_Right(self):
         graph_container = ttk.LabelFrame(
@@ -76,23 +78,34 @@ class MultiTickerApp:
 
         graph_button_frame = ttk.Frame(graph_container)
         graph_button_frame.grid(row=1, column=0, sticky="se", padx=5, pady=5)
-        ttk.Button(
+        button = ttk.Button(
             graph_button_frame,
-            text="Manual",
-            command=lambda: self.graph.UpdateGraph(),
-        ).pack(side="right")
+            text="Hide SOL/USDT",  
+        )
+        button.pack(side="right")
+        button.configure(command=lambda: self.graph.toggle_visibility(button))
 
     def Lower_Part_Bottom(self):
         bottom_frame = self.bottom_body
         self.status_tracker = StatusTracker(bottom_frame)
         status_frame = ttk.Frame(bottom_frame)
         status_frame.pack(side="bottom", fill="x", padx=10, pady=(0, 5))
-        ttk.Label(status_frame, text="10:54 11/30/2025").pack(side="left")
+        current_time = datetime.now().strftime("%H:%M %m/%d/%Y")
+        self.label_time = ttk.Label(status_frame, text=f"Last update at {current_time}")
+        self.label_time.pack(side="left")
+
         ttk.Button(
-            status_frame, text="Refresh", command=lambda: self.graph.UpdateGraph()
+            status_frame, text="Refresh", command=lambda: self.refresh()
         ).pack(side="right")
+    
+    def refresh(self):
+        self.graph.UpdateGraph()
+        current_time = datetime.now().strftime("%H:%M %m/%d/%Y")
+        self.label_time.configure(text=f"Last update at {current_time}")
+
 
     def on_closing(self):
+        self.book_depth.stop()
         self.status_tracker.stop()
         self.root.destroy()
 
