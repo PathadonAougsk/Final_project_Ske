@@ -2,7 +2,7 @@
 ### Click on the photo (To Watch showcase)
 [![Watch the video](https://github.com/PathadonAougsk/Final_project_Ske/blob/main/Thumbnail.png)](https://youtu.be/tEYnfMjdv3c)
 ---
-A real-time (auto or manual your choice!) crypto tracker that includes **Order Books**, **Tickers**, **Candlestick Chart with Volume**, and a **Last Trade Tracker**.
+A real-time crypto tracker that includes **Order Books**, **Tickers**, **Candlestick Chart with Volume**, and a **Last Trade Tracker**.
 
 ## Features
 
