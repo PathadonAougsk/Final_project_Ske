@@ -112,11 +112,11 @@ class StatusTracker:
         percent = information["percent"]
 
         color = "green" if change >= 0 else "red"
-        self.current_price.config(text=f"{price:.2f}", fg=color)
+        self.current_price.config(text=f"S{price:.2f}", fg=color)
 
         sign = "+" if change >= 0 else ""
         self.change_label.config(
-            text=f"{sign}{change:,.2f} ({sign}{percent:.2f}%)", foreground=color
+            text=f"${sign}{change:,.2f} ({sign}{percent:.2f}%)", foreground=color
         )
 
     def Update_trading(self, information):
@@ -125,8 +125,8 @@ class StatusTracker:
         quantity = information["quantity"]
 
         self.current_coin.config(text=f"{symbol}")
-        self.price.config(text=f"{price}")
-        self.quantity.config(text=f"{quantity}")
+        self.price.config(text=f"${price}")
+        self.quantity.config(text=f"${quantity}")
 
     def stop(self):
         self.tickerTracker.stop()
