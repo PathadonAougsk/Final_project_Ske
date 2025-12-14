@@ -128,6 +128,7 @@ class KlineGraph:
         self.frame = ttk.Frame(parent)
         self.symbol = symbol
         self.display_name = display_name
+        self.sol_visible = True
 
         self.fig = Figure(figsize=(6, 4), dpi=100)
 
@@ -159,14 +160,14 @@ class KlineGraph:
         self.DrawGraph(stock_prices)
 
     def DrawGraph(self, stock_prices):
-        BG_COLOR = "#27313D"
-        GRID_COLOR = "#444444"
-        TEXT_COLOR = "#E0E0E0"
+        BG_COLOR = "#F5F7FA"
+        GRID_COLOR = "#E1E5EB"
+        TEXT_COLOR = "#2C2F36"
 
-        UP_COLOR = "#00FF7F"
-        DOWN_COLOR = "#FF4500"
-        VOLUME_UP_COLOR = "#008040"
-        VOLUME_DOWN_COLOR = "#802000"
+        UP_COLOR = "#2DA44E"
+        DOWN_COLOR = "#D73A49"
+        VOLUME_UP_COLOR = "#9AD6B4"
+        VOLUME_DOWN_COLOR = "#F1A7A7"
 
         self.fig.set_facecolor(BG_COLOR)
         self.fig.patch.set_facecolor(BG_COLOR)
@@ -258,59 +259,120 @@ class KlineGraph:
     def grid(self, **kwargs):
         self.frame.grid(**kwargs)
 
+    def toggle_visibility(self, button_ref=None):
+        if self.sol_visible:
+            self.frame.grid_forget()
+            self.sol_visible = False
+            if button_ref:
+                button_ref.config(text=f"Show {self.display_name}")
+        else:
+            self.frame.grid(row=0, column=0, sticky="nsew")
+            self.sol_visible = True
+            if button_ref:
+                button_ref.config(text=f"Hide {self.display_name}")
+
 
 class BookDepth:
     def __init__(self, parent, symbol, display_name, limit) -> None:
+        self.parent = parent
         self.symbol = symbol
+        self.display_name = display_name
         self.limit = limit
+        self.sol_visible = True
+
+        self.bid_labels = [] 
+        self.ask_labels = [] 
 
         self.frame = ttk.Frame(parent)
-        self.bids_dict, self.asks_dict = bookDepthTracker().fetch_data(symbol, limit)
-
-        self.create_frame()
         self.frame.pack(fill="both", expand=True)
+        
+        self.header = ttk.Label(self.frame, text=f"{display_name} Order Book", font=("Arial", 12, "bold"))
+        self.header.pack(pady=(5, 10))
 
-    def create_frame(self):
-        bid_tmp_dict = [["BIDS", "Highest to Lowest"], ["Price", "Quantity"]]
-        ask_tmp_dict = [["ASK", "Lowest to Highest"], ["Price", "Quantity"]]
+        self.create_book_view()
 
-        bids_dict, asks_dict = bookDepthTracker().fetch_data(self.symbol, self.limit)
+        self.tracker = bookDepthTracker(self.symbol, "depth10", callback=self.update_information)
+        self.tracker.start()
 
-        bids_dict = bid_tmp_dict + list(bids_dict.items())
-        asks_dict = ask_tmp_dict + list(asks_dict.items())
 
-        max_rows = min(len(bids_dict), len(asks_dict))
+    def create_book_view(self):
+        raw_bids = [("---", "---") for _ in range(10)]
+        raw_asks = [("---", "---") for _ in range(10)]
 
-        tmp_container = ttk.Frame(self.frame)
-        tmp_container.grid(row=0, column=0, sticky="ew")
-        tmp_container.columnconfigure(0, weight=1)
-        tmp_container.columnconfigure(1, weight=1)
+        bid_data = [["BIDS", "High-Low"], ["Price", "Qty"]] + raw_bids
+        ask_data = [["ASKS", "Low-High"], ["Price", "Qty"]] + raw_asks
 
-        for index in range(max_rows):
-            tmp_frame_1 = ttk.Frame(tmp_container)
-            tmp_frame_1.grid(row=index, column=0, sticky="ew", padx=(5, 10))
+        grid_container = ttk.Frame(self.frame)
+        grid_container.pack(fill="both", expand=True, padx=10)
+        
+        grid_container.columnconfigure(0, weight=1)
+        grid_container.columnconfigure(1, weight=1)
 
-            tmp_frame_1.columnconfigure(0, weight=1)
-            tmp_frame_1.columnconfigure(1, weight=0)
+        for index in range(len(bid_data)):
+            bid_frame = ttk.Frame(grid_container)
+            bid_frame.grid(row=index, column=0, sticky="ew", padx=(0, 5))
+            bid_frame.columnconfigure(0, weight=1) 
+            bid_frame.columnconfigure(1, weight=1) 
 
-            label_1 = ttk.Label(
-                tmp_frame_1, text=f"{bids_dict[index][0]}", foreground="green"
-            )
-            label_1.grid(row=0, column=0, sticky="w")
+            fg_color = "green" if index > 1 else "black"
+            font_style = ("Arial", 10) if index > 1 else ("Arial", 10, "bold")
 
-            value_1 = ttk.Label(tmp_frame_1, text=f"{bids_dict[index][1]}")
-            value_1.grid(row=0, column=1, sticky="e", padx=5)
+            b_label = ttk.Label(bid_frame, text=f"{bid_data[index][0]}", foreground=fg_color, font=font_style)
+            b_label.grid(row=0, column=0, sticky="w")
 
-            tmp_frame_2 = ttk.Frame(tmp_container)
-            tmp_frame_2.grid(row=index, column=1, sticky="ew", padx=(10, 5))
+            b_val = ttk.Label(bid_frame, text=f"{bid_data[index][1]}", font=font_style)
+            b_val.grid(row=0, column=1, sticky="e")
 
-            tmp_frame_2.columnconfigure(0, weight=1)
-            tmp_frame_2.columnconfigure(1, weight=0)
+            self.bid_labels.append((b_label, b_val))
 
-            label_2 = ttk.Label(
-                tmp_frame_2, text=f"{asks_dict[index][0]}", foreground="red"
-            )
-            label_2.grid(row=0, column=0, sticky="w", padx=5)
+            ask_frame = ttk.Frame(grid_container)
+            ask_frame.grid(row=index, column=1, sticky="ew", padx=(5, 0))
+            ask_frame.columnconfigure(0, weight=1)
+            ask_frame.columnconfigure(1, weight=1)
 
-            value_2 = ttk.Label(tmp_frame_2, text=f"{asks_dict[index][1]}")
-            value_2.grid(row=0, column=1, sticky="e")
+            fg_color = "red" if index > 1 else "black"
+            
+            a_label = ttk.Label(ask_frame, text=f"{ask_data[index][0]}", foreground=fg_color, font=font_style)
+            a_label.grid(row=0, column=0, sticky="w")
+
+            a_val = ttk.Label(ask_frame, text=f"{ask_data[index][1]}", font=font_style)
+            a_val.grid(row=0, column=1, sticky="e")
+
+            self.ask_labels.append((a_label, a_val))
+        
+    def update_information(self, information):
+        bids_dict, asks_dict = information
+
+        bid_items = list(bids_dict.items())
+        ask_items = list(asks_dict.items())
+
+        for i in range(10):
+            ui_index = i + 2 
+            
+            if ui_index < len(self.bid_labels):
+                if i < len(bid_items):
+                    self.bid_labels[ui_index][0].configure(text=bid_items[i][0])
+                    self.bid_labels[ui_index][1].configure(text=bid_items[i][1])
+
+            if ui_index < len(self.ask_labels):
+                if i < len(ask_items):
+                
+                    self.ask_labels[ui_index][0].configure(text=ask_items[i][0])
+                    self.ask_labels[ui_index][1].configure(text=ask_items[i][1])
+
+    def toggle_visibility(self, button_ref=None):
+        if self.sol_visible:
+            self.frame.grid_forget()
+            self.sol_visible = False
+            self.tracker.stop()
+            if button_ref:
+                button_ref.config(text=f"Show {self.display_name}")
+        else:
+            self.frame.grid(row=0, column=0, sticky="nsew")
+            self.sol_visible = True
+            self.tracker.start()
+            if button_ref:
+                button_ref.config(text=f"Hide {self.display_name}")
+    
+    def stop(self):
+        self.tracker.stop()

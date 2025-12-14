@@ -1,7 +1,7 @@
 import json
 import threading
 from datetime import datetime, timedelta, timezone
-
+import time
 import requests
 import websocket
 
@@ -61,6 +61,7 @@ class TickerTracker(Framework):
 
 
 class TraderTracker(Framework):
+
     def on_message(self, ws, message):
         """Handle price updates."""
         if not self.is_active:
@@ -75,13 +76,23 @@ class TraderTracker(Framework):
         if self.callback:
             self.callback(self.information)
 
+class bookDepthTracker(Framework):
+     def __init__(self, symbol, typeOf, callback=None):
+        super().__init__(symbol, typeOf, callback)
+        self.last_update = 0 
 
-class bookDepthTracker:
-    def fetch_data(self, symbol, limit):
-        url = "https://api.binance.com/api/v3/depth"
-        params = {"symbol": "BTCUSDT", "limit": limit}
-        response = requests.get(url, params=params)
-        data = response.json()
+     def on_message(self, ws, message):
+        """Handle price updates."""
+        if not self.is_active:
+            return
+
+        current_time = time.time()
+        if current_time - self.last_update < 120: 
+            return 
+    
+        self.last_update = current_time
+        
+        data = json.loads(message)
 
         bids_dict, asks_dict = {}, {}
         for price, quantity in data["bids"]:
@@ -90,8 +101,12 @@ class bookDepthTracker:
         for price, quantity in data["asks"]:
             asks_dict[f"${float(price):.3f}"] = f"{float(quantity):.5f}"
 
-        return bids_dict, asks_dict
+        self.information = [bids_dict, asks_dict]
 
+        if self.callback:
+            self.callback(self.information) 
+
+    
 
 class CaddleTracker:
     def fetch_data(self, symbol):
