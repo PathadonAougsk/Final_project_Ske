@@ -23,18 +23,22 @@ Final_project_Ske/
 ## How to Run the Program
 
 ### 1. Requirements
+* Make sure you have **Python 3.9+** installed.
 
-Make sure you have **Python 3.9+** installed.
+Then Clone the repository:
+```bash
+git clone https://github.com/PathadonAougsk/Final_project_Ske.git
+```
 
 Install required dependencies:
 
 ```bash
-pip install websocket-client requests matplotlib tk pandas
+pip install -r requirements.txt
 ```
 
 ### 2. Run the Application
 
-Navigate to the project directory:
+#### Navigate to the project directory:
 
 ```bash
 cd Final_project_Ske
@@ -45,6 +49,3 @@ Run the main file:
 ```bash
 python main.py
 ```
-
---
-
