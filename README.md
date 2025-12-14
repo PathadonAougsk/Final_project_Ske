@@ -1,5 +1,6 @@
 # Crypto Tracker :3
-
+![Alt text](https://github.com/PathadonAougsk/Final_project_Ske/blob/main/Thumbnail.png)
+---
 A real-time (auto or manual your choice!) crypto tracker that includes **Order Books**, **Tickers**, **Candlestick Chart with Volume**, and a **Last Trade Tracker**.
 
 ## Features
@@ -45,3 +46,4 @@ python main.py
 ```
 
 --
+
