@@ -29,7 +29,7 @@ Make sure you have **Python 3.9+** installed.
 Install required dependencies:
 
 ```bash
-pip install websocket-client requests matplotlib tk
+pip install websocket-client requests matplotlib tk pandas
 ```
 
 ### 2. Run the Application
