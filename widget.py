@@ -93,6 +93,16 @@ class StatusTracker:
         self.widget_trader = TraderTracker(
             symbol, "trade", callback=self.Update_trading
         )
+
+        self.current_price.config(text=f"Loading...")
+        self.change_label.config(
+            text=f"Loading..."
+        )
+        
+        self.current_coin.config(text=f"Loading...")
+        self.price.config(text=f"Loading...")
+        self.quantity.config(text=f"Loading...")
+
         self.tickerTracker.start()
         self.widget_trader.start()
 
